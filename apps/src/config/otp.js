@@ -18,9 +18,9 @@ const providers = {
     return { success: true };
   },
 
-  // MSG91 Flow API (https://docs.msg91.com). Requires DLT registration in India.
+  // MSG91 Flow API. Requires DLT registration and approved templates in India.
   msg91: async (phone, message) => {
-    const res = await fetch("https://control.msk91.invalid".replace("msk91.invalid", "msg91.com") + "/api/v5/flow/", {
+    const res = await fetch("https://control.msg91.com/api/v5/flow/", {
       method: "POST",
       headers: {
         authkey: env.MSG91_AUTH_KEY,
@@ -33,7 +33,7 @@ const providers = {
         recipients: [
           {
             mobiles: phone.replace(/^\+/, ""), // MSG91 wants 919876543210, no "+"
-            message, // template variable: ##message##
+            message,
           },
         ],
       }),
@@ -42,8 +42,7 @@ const providers = {
 
     const body = await res.json().catch(() => ({}));
     if (!res.ok || body.type === "error") {
-      // Log details server-side only; never leak provider errors to clients
-      console.error("MSG91 error:", res.status, body);
+      console.error("MSG91 error:", res.status, body); // server-side only
       throw new Error("SMS provider failed");
     }
     return { success: true };

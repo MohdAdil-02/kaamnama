@@ -30,7 +30,9 @@ const receiptSchema = new mongoose.Schema(
     },
     verificationMethod: { type: String, enum: Object.values(VERIFICATION_METHOD) },
     verifiedAt: Date,
-    disputeReason: { type: String, trim: true, maxlength: 500 },
+        disputeReason: { type: String, trim: true, maxlength: 500 },
+    disputedAfterVerification: { type: Boolean, default: false },
+    disputedAt: Date,
     expiresAt: { type: Date, index: true }, // pending receipts expire
 
     // Token for QR / link verification (stored hashed)

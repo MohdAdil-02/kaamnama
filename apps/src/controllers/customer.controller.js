@@ -1,11 +1,12 @@
-import mongoose from "mongoose";
 import JobReceipt from "../models/JobReceipt.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import AppError from "../utils/AppError.js";
 import { RECEIPT_STATUS } from "../constants/statuses.js";
 import { getPagination, buildPaginationMeta } from "../utils/pagination.js";
+import { disputeVerifiedReceipt, DISPUTE_WINDOW_DAYS } from "../services/dispute.service.js";
 
 const WORKER_FIELDS = "displayName photoUrl publicId slug tier city";
+const meta = (req) => ({ ip: req.ip, userAgent: req.headers["user-agent"] });
 
 // Receipts are matched by phone, so ones created before signup are included.
 export const listMyReceipts = asyncHandler(async (req, res) => {
@@ -74,4 +75,14 @@ export const listMyWorkers = asyncHandler(async (req, res) => {
   ]);
 
   res.json({ success: true, data: { workers: rows } });
+});
+
+// Dispute a job that was already verified (within the dispute window)
+export const disputeReceipt = asyncHandler(async (req, res) => {
+  const data = await disputeVerifiedReceipt(req.user, req.params.id, req.body.reason, meta(req));
+  res.json({
+    success: true,
+    message: `Your dispute has been recorded. The worker's record was updated (disputes are allowed within ${DISPUTE_WINDOW_DAYS} days of confirming).`,
+    data,
+  });
 });

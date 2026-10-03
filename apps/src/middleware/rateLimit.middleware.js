@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import env from "../config/environment.js";
 
 const build = ({ windowMs, limit, message }) =>
   rateLimit({
@@ -7,6 +8,8 @@ const build = ({ windowMs, limit, message }) =>
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message },
+    // Tests log in dozens of times from one IP, so skip limiting there
+    skip: () => env.NODE_ENV === "test",
   });
 
 // Applied to every request

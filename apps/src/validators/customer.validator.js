@@ -25,3 +25,11 @@ export const workerRatingsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
 });
+
+export const disputeReceiptSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Please describe the issue (at least 10 characters)")
+    .max(500),
+});

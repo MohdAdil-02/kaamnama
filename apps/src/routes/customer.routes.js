@@ -4,7 +4,11 @@ import validate from "../middleware/validation.middleware.js";
 import { protect } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/role.middleware.js";
 import { ROLES } from "../constants/roles.js";
-import { customerReceiptsQuerySchema, customerIdParamSchema } from "../validators/customer.validator.js";
+import {
+  customerReceiptsQuerySchema,
+  customerIdParamSchema,
+  disputeReceiptSchema,
+} from "../validators/customer.validator.js";
 
 const router = Router();
 
@@ -12,6 +16,11 @@ router.use(protect, authorize(ROLES.CUSTOMER));
 
 router.get("/me/receipts", validate({ query: customerReceiptsQuerySchema }), ctrl.listMyReceipts);
 router.get("/me/receipts/:id", validate({ params: customerIdParamSchema }), ctrl.getMyReceipt);
+router.post(
+  "/me/receipts/:id/dispute",
+  validate({ params: customerIdParamSchema, body: disputeReceiptSchema }),
+  ctrl.disputeReceipt
+);
 router.get("/me/workers", ctrl.listMyWorkers);
 
 export default router;
