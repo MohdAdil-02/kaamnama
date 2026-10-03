@@ -1,0 +1,22 @@
+// Seed list; the Category model will be seeded from this.
+export const DEFAULT_CATEGORIES = [
+  { name: "Electrician", slug: "electrician" },
+  { name: "Plumber", slug: "plumber" },
+  { name: "Carpenter", slug: "carpenter" },
+  { name: "Painter", slug: "painter" },
+  { name: "Mason", slug: "mason" },
+  { name: "Welder", slug: "welder" },
+  { name: "AC Technician", slug: "ac-technician" },
+  { name: "Appliance Repair", slug: "appliance-repair" },
+  { name: "House Help / Maid", slug: "house-help" },
+  { name: "Cook", slug: "cook" },
+  { name: "Driver", slug: "driver" },
+  { name: "Security Guard", slug: "security-guard" },
+  { name: "Gardener", slug: "gardener" },
+  { name: "Pest Control", slug: "pest-control" },
+  { name: "Cleaner", slug: "cleaner" },
+  { name: "Tailor", slug: "tailor" },
+  { name: "Delivery", slug: "delivery" },
+  { name: "Labour / Helper", slug: "labour-helper" },
+  { name: "Other", slug: "other" },
+];
