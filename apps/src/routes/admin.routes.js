@@ -12,6 +12,7 @@ import {
   listOrgsQuerySchema,
   listReceiptsQuerySchema,
   listAuditQuerySchema,
+  listFlaggedQuerySchema,
 } from "../validators/admin.validator.js";
 
 const router = Router();
@@ -34,5 +35,12 @@ router.post("/organizations/:id/unverify", validate({ params: idParamSchema }), 
 
 router.get("/receipts", validate({ query: listReceiptsQuerySchema }), ctrl.listReceipts);
 router.get("/audit-logs", validate({ query: listAuditQuerySchema }), ctrl.listAuditLogs);
+
+// ---------- Risk review ----------
+router.get("/workers/flagged", validate({ query: listFlaggedQuerySchema }), ctrl.listFlaggedWorkers);
+router.post("/workers/:id/rescan", validate({ params: idParamSchema }), ctrl.rescanWorker);
+router.post("/workers/:id/clear-flag", validate({ params: idParamSchema, body: reasonSchema }), ctrl.clearWorkerFlag);
+router.post("/workers/:id/freeze", validate({ params: idParamSchema, body: reasonSchema }), ctrl.freezeWorker);
+router.post("/workers/:id/unfreeze", validate({ params: idParamSchema }), ctrl.unfreezeWorker);
 
 export default router;

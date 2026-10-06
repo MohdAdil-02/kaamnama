@@ -30,6 +30,12 @@ const workerSchema = new mongoose.Schema(
     averageRating: { type: Number, min: 0, max: 5, default: 0 },
     ratingsCount: { type: Number, default: 0 },
     repeatCustomersCount: { type: Number, default: 0 },
+    riskScore: { type: Number, default: 0 },
+    riskFlagged: { type: Boolean, default: false, index: true },
+    riskReviewed: { type: Boolean, default: false }, // admin cleared it
+    scoreFrozen: { type: Boolean, default: false },
+    riskSignals: [{ _id: false, code: String, points: Number, detail: String }],
+    riskCheckedAt: Date,
   },
   { timestamps: true }
 );

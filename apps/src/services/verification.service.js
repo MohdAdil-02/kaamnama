@@ -9,6 +9,7 @@ import * as otpService from "./otp.service.js";
 import { refreshRepeatStatus } from "./repeatCustomer.service.js";
 import { recomputeTrustScore } from "./trustScore.service.js";
 import { notify } from "./notification.service.js";
+import { assessWorkerRisk } from "./risk.service.js";
 
 const MAX_OTP_SENDS_PER_RECEIPT = 5;
 
@@ -142,6 +143,7 @@ export const confirmReceipt = async (token, { otp, action, reason, channel }, me
   }
   // Disputes and rejections affect the score too, so recompute for every outcome
   await recomputeTrustScore(receipt.worker._id);
+  if (action === "verify") await assessWorkerRisk(receipt.worker._id);
 
   const notice = WORKER_NOTICE[action];
   await notify(receipt.workerUser, {

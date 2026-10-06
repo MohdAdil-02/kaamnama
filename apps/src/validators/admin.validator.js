@@ -43,3 +43,8 @@ export const listAuditQuerySchema = z.object({
   targetType: z.string().trim().max(40).optional(),
   ...paging,
 });
+
+export const listFlaggedQuerySchema = z.object({
+  reviewed: boolString.optional(),
+  ...paging,
+});

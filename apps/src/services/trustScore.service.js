@@ -73,8 +73,9 @@ const nextTierInfo = (currentTier, score, verifiedJobs) => {
  */
 export const recomputeTrustScore = async (workerId) => {
   const id = new mongoose.Types.ObjectId(String(workerId));
-  const worker = await Worker.findById(id).select("createdAt tier user");
+  const worker = await Worker.findById(id).select("createdAt tier user scoreFrozen");
   if (!worker) return null;
+  if (worker.scoreFrozen) return null; // admin froze this score
 
   const [statusRows, ratingRows, repeatCustomers] = await Promise.all([
     JobReceipt.aggregate([

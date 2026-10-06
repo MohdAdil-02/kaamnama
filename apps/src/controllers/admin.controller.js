@@ -1,3 +1,4 @@
+import { assessWorkerRisk } from "../services/risk.service.js";
 import User from "../models/User.js";
 import Worker from "../models/Worker.js";
 import JobReceipt from "../models/JobReceipt.js";
@@ -253,4 +254,77 @@ export const listAuditLogs = asyncHandler(async (req, res) => {
     },
     req.query
   );
+});
+
+// ---------- Risk review ----------
+export const listFlaggedWorkers = asyncHandler(async (req, res) => {
+  const filter = { riskFlagged: true };
+  if (req.query.reviewed === true) {
+    // cleared workers are never flagged, so show those that were cleared instead
+    delete filter.riskFlagged;
+    filter.riskReviewed = true;
+  }
+  await paged(
+    res, Worker, filter,
+    {
+      select: "displayName publicId slug tier trustScore verifiedJobsCount riskScore riskSignals riskFlagged riskReviewed scoreFrozen riskCheckedAt",
+      sort: { riskScore: -1 },
+      key: "workers",
+    },
+    req.query
+  );
+});
+
+export const rescanWorker = asyncHandler(async (req, res) => {
+  const worker = await Worker.findById(req.params.id).select("_id");
+  if (!worker) throw AppError.notFound("Worker not found");
+  const risk = await assessWorkerRisk(worker._id);
+  res.json({ success: true, data: { risk } });
+});
+
+export const clearWorkerFlag = asyncHandler(async (req, res) => {
+  const worker = await Worker.findById(req.params.id).select("riskFlagged riskReviewed");
+  if (!worker) throw AppError.notFound("Worker not found");
+
+  await Worker.updateOne({ _id: worker._id }, { riskFlagged: false, riskReviewed: true });
+  await logAction(req, "worker.risk_clear", {
+    targetType: "Worker",
+    targetId: worker._id,
+    before: { riskFlagged: worker.riskFlagged },
+    after: { riskFlagged: false, note: req.body.reason },
+  });
+  res.json({ success: true, message: "Flag cleared. This worker will not be re-flagged automatically." });
+});
+
+export const freezeWorker = asyncHandler(async (req, res) => {
+  const worker = await Worker.findById(req.params.id).select("scoreFrozen");
+  if (!worker) throw AppError.notFound("Worker not found");
+  if (worker.scoreFrozen) throw AppError.conflict("Already frozen");
+
+  // Pin the public numbers at the lowest level while frozen
+  await Worker.updateOne(
+    { _id: worker._id },
+    { scoreFrozen: true, tier: "new", trustScore: 0 }
+  );
+  await logAction(req, "worker.freeze", {
+    targetType: "Worker",
+    targetId: worker._id,
+    after: { scoreFrozen: true, reason: req.body.reason },
+  });
+  res.json({ success: true, message: "Trust score frozen" });
+});
+
+export const unfreezeWorker = asyncHandler(async (req, res) => {
+  const worker = await Worker.findById(req.params.id).select("scoreFrozen");
+  if (!worker) throw AppError.notFound("Worker not found");
+  if (!worker.scoreFrozen) throw AppError.badRequest("Worker is not frozen");
+
+  await Worker.updateOne({ _id: worker._id }, { scoreFrozen: false });
+  const trust = await recomputeTrustScore(worker._id); // restore real numbers
+  await logAction(req, "worker.unfreeze", {
+    targetType: "Worker",
+    targetId: worker._id,
+    after: { scoreFrozen: false },
+  });
+  res.json({ success: true, message: "Trust score restored", data: { workerTrust: trust && { score: trust.score, tier: trust.tier } } });
 });
