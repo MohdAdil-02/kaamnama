@@ -20,9 +20,7 @@ export const sendDeleteOtp = (user) => {
   return otpService.sendOtp({
     phone: user.phone,
     purpose: OTP_PURPOSE.ACCOUNT_DELETE,
-    buildMessage: (code, ttl) =>
-      `${code} is your Kaamnama code to DELETE your account. Valid ${ttl} min. ` +
-      `If you did not ask for this, do not share it.`,
+    template: "delete_otp",
   });
 };
 
@@ -146,6 +144,7 @@ export const exportMyData = async (user) => {
     ]);
 
   delete account.__v;
+  delete account.refreshTokens;
 
   return {
     exportedAt: new Date().toISOString(),

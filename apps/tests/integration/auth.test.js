@@ -35,6 +35,22 @@ describe("auth", () => {
     expect(res.status).toBe(400);
   });
 
+    it("does not leave a cooldown behind when the SMS fails to send", async () => {
+    const sms = await import("../../src/config/sms.js");
+    const OTP = (await import("../../src/models/OTP.js")).default;
+    const { vi } = await import("vitest");
+
+    // Make the console provider fail for this one request
+    const spy = vi.spyOn(console, "log").mockImplementationOnce(() => {
+      throw new Error("boom");
+    });
+    const res = await request(app).post("/api/v1/auth/otp/send").send({ phone: "9876543210" });
+    expect(res.status).toBe(502);
+    expect(await OTP.countDocuments({ phone: "+919876543210" })).toBe(0);
+    spy.mockRestore();
+    expect(sms.sendSms).toBeTypeOf("function");
+  });
+
   it("does not allow self-registering as admin", async () => {
     await request(app).post("/api/v1/auth/otp/send").send({ phone: "9876543210" });
     const otp = lastOtpFor("+919876543210");

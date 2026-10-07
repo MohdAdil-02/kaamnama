@@ -3,6 +3,8 @@ import { z } from "zod";
 
 dotenv.config();
 
+const optional = z.string().optional().default("");
+
 const schema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(5000),
@@ -21,8 +23,11 @@ const schema = z.object({
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(30),
   OTP_PROVIDER: z.enum(["console", "msg91"]).default("console"),
 
-  MSG91_AUTH_KEY: z.string().optional().default(""),
-  MSG91_TEMPLATE_ID: z.string().optional().default(""),
+  MSG91_AUTH_KEY: optional,
+  MSG91_TEMPLATE_LOGIN_OTP: optional,
+  MSG91_TEMPLATE_RECEIPT_OTP: optional,
+  MSG91_TEMPLATE_DELETE_OTP: optional,
+  MSG91_TEMPLATE_RECEIPT_LINK: optional,
 
   ENABLE_JOBS: z
     .enum(["true", "false"])
@@ -32,11 +37,11 @@ const schema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
-  SENTRY_DSN: z.string().optional().default(""),
+  SENTRY_DSN: optional,
 
-  CLOUDINARY_CLOUD_NAME: z.string().optional().default(""),
-  CLOUDINARY_API_KEY: z.string().optional().default(""),
-  CLOUDINARY_API_SECRET: z.string().optional().default(""),
+  CLOUDINARY_CLOUD_NAME: optional,
+  CLOUDINARY_API_KEY: optional,
+  CLOUDINARY_API_SECRET: optional,
 });
 
 const parsed = schema.safeParse(process.env);
@@ -49,15 +54,26 @@ if (!parsed.success) {
 
 const env = parsed.data;
 
-// ---------- Production safety checks ----------
-if (env.NODE_ENV === "production") {
-  const problems = [];
+const MSG91_REQUIRED = [
+  "MSG91_AUTH_KEY",
+  "MSG91_TEMPLATE_LOGIN_OTP",
+  "MSG91_TEMPLATE_RECEIPT_OTP",
+  "MSG91_TEMPLATE_DELETE_OTP",
+  "MSG91_TEMPLATE_RECEIPT_LINK",
+];
 
+// ---------- Safety checks ----------
+const problems = [];
+
+// Wrong in any environment: msg91 selected but not configured
+if (env.OTP_PROVIDER === "msg91") {
+  const missing = MSG91_REQUIRED.filter((k) => !env[k]);
+  if (missing.length) problems.push(`OTP_PROVIDER=msg91 but missing: ${missing.join(", ")}`);
+}
+
+if (env.NODE_ENV === "production") {
   if (env.OTP_PROVIDER === "console") {
     problems.push("OTP_PROVIDER=console is not allowed in production (OTPs would be printed in logs)");
-  }
-  if (env.OTP_PROVIDER === "msg91" && (!env.MSG91_AUTH_KEY || !env.MSG91_TEMPLATE_ID)) {
-    problems.push("MSG91_AUTH_KEY and MSG91_TEMPLATE_ID are required when OTP_PROVIDER=msg91");
   }
   if (/localhost|127\.0\.0\.1/.test(env.CLIENT_URL)) {
     problems.push("CLIENT_URL must be your real frontend URL in production");
@@ -68,12 +84,12 @@ if (env.NODE_ENV === "production") {
   if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
     problems.push("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different");
   }
+}
 
-  if (problems.length) {
-    console.error("❌ Unsafe production configuration:");
-    problems.forEach((p) => console.error(`   - ${p}`));
-    process.exit(1);
-  }
+if (problems.length) {
+  console.error("❌ Unsafe configuration:");
+  problems.forEach((p) => console.error(`   - ${p}`));
+  process.exit(1);
 }
 
 export default {

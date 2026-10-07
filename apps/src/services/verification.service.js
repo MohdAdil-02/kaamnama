@@ -8,8 +8,8 @@ import { maskPhone } from "../utils/phone.js";
 import * as otpService from "./otp.service.js";
 import { refreshRepeatStatus } from "./repeatCustomer.service.js";
 import { recomputeTrustScore } from "./trustScore.service.js";
-import { notify } from "./notification.service.js";
 import { assessWorkerRisk } from "./risk.service.js";
+import { notify } from "./notification.service.js";
 
 const MAX_OTP_SENDS_PER_RECEIPT = 5;
 
@@ -29,6 +29,7 @@ const findByToken = async (token) => {
 
   if (!receipt) throw AppError.notFound("This verification link is invalid or no longer active");
 
+  // Lazy expiry (the hourly job also sweeps these)
   if (receipt.status === RECEIPT_STATUS.PENDING && receipt.expiresAt && receipt.expiresAt < new Date()) {
     await JobReceipt.updateOne(
       { _id: receipt._id, status: RECEIPT_STATUS.PENDING },
@@ -47,6 +48,7 @@ const requirePending = (receipt) => {
   }
 };
 
+// What the customer sees before confirming. No worker phone, no full customer phone.
 export const getPreview = async (token) => {
   const r = await findByToken(token);
   return {
@@ -85,9 +87,8 @@ export const sendVerificationOtp = async (token, meta) => {
     phone: receipt.customerPhone,
     purpose: OTP_PURPOSE.RECEIPT_VERIFY,
     reference: receipt._id,
-    buildMessage: (code, ttl) =>
-      `${code} is your Kaamnama code to confirm the job "${receipt.title}" by ${receipt.worker.displayName}. ` +
-      `Valid ${ttl} min. Share it only if this work was done for you.`,
+    template: "receipt_otp",
+    vars: { worker: receipt.worker.displayName, job: receipt.title },
   });
 
   await logEvent(receipt._id, "otp_sent", meta, { actorPhone: receipt.customerPhone });
@@ -110,6 +111,7 @@ export const confirmReceipt = async (token, { otp, action, reason, channel }, me
   const receipt = await findByToken(token);
   requirePending(receipt);
 
+  // The OTP proves the customer controls the phone number on the receipt
   try {
     await otpService.verifyOtp({
       phone: receipt.customerPhone,
@@ -133,7 +135,7 @@ export const confirmReceipt = async (token, { otp, action, reason, channel }, me
   // Atomic: only one request can move the receipt out of "pending"
   const updated = await JobReceipt.findOneAndUpdate(
     { _id: receipt._id, status: RECEIPT_STATUS.PENDING },
-    { $set: set, $unset: { verifyTokenHash: 1 } },
+    { $set: set, $unset: { verifyTokenHash: 1 } }, // token is single-use
     { returnDocument: "after" }
   );
   if (!updated) throw AppError.conflict("This receipt was already processed");
@@ -143,7 +145,7 @@ export const confirmReceipt = async (token, { otp, action, reason, channel }, me
   }
   // Disputes and rejections affect the score too, so recompute for every outcome
   await recomputeTrustScore(receipt.worker._id);
-  if (action === "verify") await assessWorkerRisk(receipt.worker._id);
+  if (action === "verify") await assessWorkerRisk(receipt.worker._id); // never throws
 
   const notice = WORKER_NOTICE[action];
   await notify(receipt.workerUser, {

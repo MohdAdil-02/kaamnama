@@ -1,9 +1,14 @@
 import OTP from "../models/OTP.js";
 import AppError from "../utils/AppError.js";
-import { otpConfig, sendSms } from "../config/otp.js";
+import { otpConfig } from "../config/otp.js";
+import { sendSms } from "../config/sms.js";
 import { generateNumericOtp, hashValue, compareHash } from "../utils/hash.js";
 
-export const sendOtp = async ({ phone, purpose, reference = null, buildMessage = null }) => {
+/**
+ * `template` is a key from config/sms.js. `vars` are its extra variables;
+ * `code` and `minutes` are added here.
+ */
+export const sendOtp = async ({ phone, purpose, reference = null, template = "login_otp", vars = {} }) => {
   // Cooldown: block rapid re-sends
   const last = await OTP.findOne({ phone, purpose }).sort({ createdAt: -1 });
   if (last) {
@@ -18,7 +23,7 @@ export const sendOtp = async ({ phone, purpose, reference = null, buildMessage =
   await OTP.updateMany({ phone, purpose, consumed: false }, { consumed: true });
 
   const code = generateNumericOtp(otpConfig.length);
-  await OTP.create({
+  const record = await OTP.create({
     phone,
     purpose,
     reference,
@@ -26,10 +31,13 @@ export const sendOtp = async ({ phone, purpose, reference = null, buildMessage =
     expiresAt: new Date(Date.now() + otpConfig.ttlMinutes * 60 * 1000),
   });
 
-  const text = buildMessage
-    ? buildMessage(code, otpConfig.ttlMinutes)
-    : `Your Kaamnama verification code is ${code}. Valid for ${otpConfig.ttlMinutes} minutes. Do not share it.`;
-  await sendSms(phone, text);
+  try {
+    await sendSms(phone, template, { ...vars, code, minutes: otpConfig.ttlMinutes });
+  } catch (err) {
+    // Nothing was delivered, so don't leave a record that triggers the resend cooldown
+    await OTP.deleteOne({ _id: record._id });
+    throw err;
+  }
 
   return { expiresInSeconds: otpConfig.ttlMinutes * 60 };
 };

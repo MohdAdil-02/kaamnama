@@ -8,7 +8,7 @@ import { RECEIPT_STATUS, VERIFICATION_METHOD, NOTIFICATION_TYPE } from "../const
 import { generateToken, sha256 } from "../utils/hash.js";
 import { getPagination, buildPaginationMeta } from "../utils/pagination.js";
 import { maskPhone } from "../utils/phone.js";
-import { sendSms } from "../config/otp.js";
+import { sendSms } from "../config/sms.js";
 import { uploadImageBuffer } from "./upload.service.js";
 import { buildVerifyUrl, generateQr } from "./qr.service.js";
 import { loadWorker } from "./profile.service.js";
@@ -174,10 +174,11 @@ export const sendLinkToCustomer = async (user, id, meta) => {
   const worker = await loadWorker(user._id);
   const { url } = await issueVerification(receipt);
 
-  await sendSms(
-    receipt.customerPhone,
-    `${worker.displayName} has asked you to confirm a job on Kaamnama: "${receipt.title}". Open: ${url}`
-  );
+    await sendSms(receipt.customerPhone, "receipt_link", {
+    worker: worker.displayName,
+    job: receipt.title,
+    link: url,
+  });
 
   await VerificationEvent.create({
     receipt: receipt._id,
