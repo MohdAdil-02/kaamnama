@@ -1,5 +1,7 @@
 import cron from "node-cron";
 import env from "../config/environment.js";
+import logger from "../config/logger.js";
+import Sentry from "../config/sentry.js";
 import { expireStaleReceipts } from "./notification.job.js";
 import { recomputeAllTrustScores } from "./trustScore.job.js";
 
@@ -7,16 +9,17 @@ const running = new Set();
 
 const guarded = (name, fn) => async () => {
   if (running.has(name)) {
-    console.warn(`⏭️  Job "${name}" is still running, skipping this tick`);
+    logger.warn({ job: name }, "job still running, skipping this tick");
     return;
   }
   running.add(name);
   const started = Date.now();
   try {
     const result = await fn();
-    console.log(`🕒 Job "${name}" done in ${Date.now() - started}ms`, result);
+    logger.info({ job: name, ms: Date.now() - started, result }, "job finished");
   } catch (err) {
-    console.error(`💥 Job "${name}" failed:`, err);
+    logger.error({ err, job: name }, "job failed");
+    Sentry.captureException(err, { tags: { job: name } });
   } finally {
     running.delete(name);
   }
@@ -24,7 +27,7 @@ const guarded = (name, fn) => async () => {
 
 export const startJobs = () => {
   if (!env.ENABLE_JOBS) {
-    console.log("⏸️  Background jobs disabled (ENABLE_JOBS=false)");
+    logger.info("Background jobs disabled (ENABLE_JOBS=false)");
     return;
   }
 
@@ -36,5 +39,5 @@ export const startJobs = () => {
     timezone: "Asia/Kolkata",
   });
 
-  console.log("🕒 Background jobs scheduled (hourly expiry, nightly trust recompute)");
+  logger.info("🕒 Background jobs scheduled (hourly expiry, nightly trust recompute)");
 };

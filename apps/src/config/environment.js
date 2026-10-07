@@ -29,6 +29,11 @@ const schema = z.object({
     .default("true")
     .transform((v) => v === "true"),
 
+  LOG_LEVEL: z
+    .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
+    .default("info"),
+  SENTRY_DSN: z.string().optional().default(""),
+
   CLOUDINARY_CLOUD_NAME: z.string().optional().default(""),
   CLOUDINARY_API_KEY: z.string().optional().default(""),
   CLOUDINARY_API_SECRET: z.string().optional().default(""),

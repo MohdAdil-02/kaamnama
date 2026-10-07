@@ -1,6 +1,8 @@
 import { ZodError } from "zod";
 import AppError from "../utils/AppError.js";
 import env from "../config/environment.js";
+import logger from "../config/logger.js";
+import Sentry from "../config/sentry.js";
 
 // Convert known library errors into AppError so the response is consistent.
 const normalizeError = (err) => {
@@ -55,14 +57,22 @@ const errorHandler = (err, req, res, next) => {
   const error = normalizeError(err);
   const statusCode = error.statusCode || 500;
   const isOperational = error.isOperational === true;
+  const log = req.log || logger;
 
-  if (!isOperational) {
-    console.error("💥 UNEXPECTED ERROR:", err);
+  // Expected errors (4xx) are already logged by the request logger.
+  // Anything unexpected, or any 5xx, is logged in full and sent to Sentry.
+  if (!isOperational || statusCode >= 500) {
+    log.error({ err, requestId: req.id }, "unhandled error");
+    Sentry.captureException(err, {
+      tags: { request_id: req.id },
+      user: req.user ? { id: String(req.user._id) } : undefined,
+    });
   }
 
   const body = {
     success: false,
     message: isOperational || !env.isProd ? error.message : "Something went wrong",
+    requestId: req.id,
   };
   if (error.details) body.errors = error.details;
   if (!env.isProd) body.stack = err.stack;
