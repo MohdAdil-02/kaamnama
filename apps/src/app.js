@@ -21,6 +21,7 @@ import ratingRoutes from "./routes/rating.routes.js";
 import organizationRoutes from "./routes/organization.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import accountRoutes from "./routes/account.routes.js";
 
 
 const app = express();
@@ -85,6 +86,7 @@ app.use("/api/v1/ratings", ratingRoutes);
 app.use("/api/v1/organizations", organizationRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/account", accountRoutes);
 // Step 12: admin
 
 // ---------- Errors (must be last) ----------

@@ -2,6 +2,7 @@ import JobReceipt from "../models/JobReceipt.js";
 import VerificationEvent from "../models/VerificationEvent.js";
 import { RECEIPT_STATUS, NOTIFICATION_TYPE } from "../constants/statuses.js";
 import { notify } from "../services/notification.service.js";
+import { deleteImage } from "../services/upload.service.js";
 
 const BATCH = 500;
 
@@ -10,20 +11,29 @@ export const expireStaleReceipts = async () => {
     status: RECEIPT_STATUS.PENDING,
     expiresAt: { $lt: new Date() },
   })
-    .select("_id workerUser title")
+    .select("_id workerUser title photos")
     .limit(BATCH)
     .lean();
 
   let expired = 0;
+  let photosRemoved = 0;
+
   for (const r of stale) {
     // Atomic: skip it if the customer confirmed it a moment ago
     const res = await JobReceipt.updateOne(
       { _id: r._id, status: RECEIPT_STATUS.PENDING },
-      { status: RECEIPT_STATUS.EXPIRED, $unset: { verifyTokenHash: 1 } }
+      { $set: { status: RECEIPT_STATUS.EXPIRED, photos: [] }, $unset: { verifyTokenHash: 1 } }
     );
     if (!res.modifiedCount) continue;
 
     expired++;
+
+    // Expired receipts are dead records, so free the stored images (best effort)
+    for (const p of r.photos || []) {
+      await deleteImage(p.publicId);
+      photosRemoved++;
+    }
+
     await VerificationEvent.create({ receipt: r._id, type: "expired" });
     await notify(r.workerUser, {
       type: NOTIFICATION_TYPE.RECEIPT_EXPIRED,
@@ -33,5 +43,5 @@ export const expireStaleReceipts = async () => {
     });
   }
 
-  return { found: stale.length, expired };
+  return { found: stale.length, expired, photosRemoved };
 };
