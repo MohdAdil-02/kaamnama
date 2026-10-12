@@ -10,7 +10,7 @@ import { ROLES, FEATURES } from '../../utils/constants';
 import usePageTitle from '../../hooks/usePageTitle';
 
 const ROLE_OPTIONS = [
-  { value: ROLES.WORKER, title: 'Worker / Teacher', text: 'Build a verified record of your work' },
+  { value: ROLES.WORKER, title: 'Worker', text: 'Build a verified record of your work' },
   FEATURES.organizations && { value: ROLES.ORGANIZATION, title: 'Organization', text: 'Contractor, agency or firm' },
 ].filter(Boolean);
 
@@ -31,9 +31,10 @@ export default function Register() {
     if (Object.keys(errs).length) return;
     setLoading(true);
     try {
-      await authApi.register({ name: v.name.trim(), phone: v.phone, role: v.role });
-      navigate('/verify-otp', { state: { phone: v.phone } });
-    } catch (err) { setErrors({ form: err.message, ...(err.errors || {}) }); } finally { setLoading(false); }
+      // No separate register call: the account is created when the OTP is verified
+      await authApi.sendOtp(v.phone);
+      navigate('/verify-otp', { state: { phone: v.phone, name: v.name.trim(), role: v.role } });
+    } catch (err) { setErrors({ form: err.message }); } finally { setLoading(false); }
   };
 
   return (

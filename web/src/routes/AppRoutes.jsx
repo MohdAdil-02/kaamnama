@@ -23,7 +23,6 @@ const SelectCategory = page(() => import('../pages/auth/SelectCategory'));
 // customer
 const ConfirmReceipt = page(() => import('../pages/customer/ConfirmReceipt'));
 const VerifyCustomerOTP = page(() => import('../pages/customer/VerifyCustomerOTP'));
-const RateWorker = page(() => import('../pages/customer/RateWorker'));
 // worker
 const WDashboard = page(() => import('../pages/worker/Dashboard'));
 const WProfile = page(() => import('../pages/worker/Profile'));
@@ -76,10 +75,9 @@ export default function AppRoutes() {
           <Route path="/select-category" element={<SelectCategory />} />
         </Route>
 
-        {/* Customer flow: public, opened from a WhatsApp / SMS link, no login, no app install */}
-        <Route path="/confirm/:receiptId" element={<ConfirmReceipt />} />
-        <Route path="/confirm/:receiptId/otp" element={<VerifyCustomerOTP />} />
-        <Route path="/rate/:receiptId" element={<RateWorker />} />
+        {/* Public customer flow, opened from the QR or SMS link. The token is the credential. */}
+        <Route path="/verify/:token" element={<ConfirmReceipt />} />
+        <Route path="/verify/:token/otp" element={<VerifyCustomerOTP />} />
 
         <Route element={<AuthGuard roles={[ROLES.WORKER]} />}>
           <Route element={<DashboardLayout />}>

@@ -9,7 +9,10 @@ export default function QRCode() {
     <>
       <PageHeader title="Your QR code" subtitle="Customers scan this to open your verified profile" />
       <DataState result={res}>
-        {(w) => <div className="card mx-auto max-w-md"><ProfileQR slug={w.slug || w._id} /></div>}
+        {(d) => {
+          const w = d.worker ?? d.data?.worker ?? d;
+          return <div className="card mx-auto max-w-md"><ProfileQR slug={w.slug || w.publicId} /></div>;
+        }}
       </DataState>
     </>
   );

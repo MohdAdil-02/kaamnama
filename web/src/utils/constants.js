@@ -1,11 +1,17 @@
-export const ROLES = { WORKER: 'worker', CUSTOMER: 'customer', ORGANIZATION: 'organization', ADMIN: 'admin' };
+export const ROLES = { WORKER: 'worker', CUSTOMER: 'customer', ORGANIZATION: 'org_admin', ADMIN: 'admin' };
 
 // Keep in sync with backend constants/statuses.js
-export const RECEIPT_STATUS = { PENDING: 'pending', VERIFIED: 'verified', COMPLETED: 'completed', REJECTED: 'rejected' };
+export const RECEIPT_STATUS = {
+  PENDING: 'pending',
+  VERIFIED: 'verified',
+  DISPUTED: 'disputed',
+  REJECTED: 'rejected',
+  EXPIRED: 'expired',
+};
 
 export const HOME_BY_ROLE = {
   worker: '/worker/dashboard',
-  organization: '/organization/dashboard',
+  org_admin: '/organization/dashboard',
   admin: '/admin/dashboard',
   customer: '/',
 };
@@ -20,6 +26,9 @@ export const FEATURES = {
 
 export const APP_URL = import.meta.env.VITE_APP_URL || window.location.origin;
 export const PAGE_SIZE = 12;
+
+// The backend has no organization "type" or member-role fields yet.
+// These are kept so existing components compile; they are display-only for now.
 export const ORG_TYPES = [
   { value: 'contractor', label: 'Contractor' },
   { value: 'agency', label: 'Agency' },

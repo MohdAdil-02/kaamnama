@@ -3,11 +3,10 @@ import { Pencil } from 'lucide-react';
 import PageHeader from '../../components/common/PageHeader';
 import Button from '../../components/common/Button';
 import DataState from '../../components/common/DataState';
-import WorkerProfile from '../../components/worker/WorkerProfile';
-import ProfileStats from '../../components/profile/ProfileStats';
-import ProfileHighlights from '../../components/profile/ProfileHighlights';
-import EducationProfile from '../../components/education/EducationProfile';
+import PublicProfile from '../../components/profile/PublicProfile';
 import useWorker from '../../hooks/useWorker';
+import useFetch from '../../hooks/useFetch';
+import { profileApi } from '../../services/profileApi';
 
 export default function Profile() {
   const res = useWorker();
@@ -16,16 +15,23 @@ export default function Profile() {
       <PageHeader title="My profile" subtitle="This is how customers see you"
         action={<Link to="/worker/profile/edit"><Button icon={Pencil}>Edit profile</Button></Link>} />
       <DataState result={res}>
-        {(w) => (
-          <div className="space-y-6">
-            <WorkerProfile worker={w} />
-            <div className="card"><h2 className="mb-4">Track record</h2><ProfileHighlights profile={w} /></div>
-            <ProfileStats profile={w} />
-            <EducationProfile data={w.education} />
-            {w.slug && <Link to={`/w/${w.slug}`} className="inline-block text-sm font-medium text-primary">View public profile</Link>}
-          </div>
-        )}
+        {(raw) => {
+          const w = raw.data?.worker ?? raw.worker ?? raw;
+          // The worker record uses the same field names as the public profile
+          return <Own worker={{ ...w, memberSince: w.createdAt }} />;
+        }}
       </DataState>
     </>
+  );
+}
+
+function Own({ worker }) {
+  const ratings = useFetch(() => profileApi.getRatings(worker.slug, { limit: 10 }), [worker.slug]);
+  const list = ratings.data?.data?.ratings ?? ratings.data?.ratings ?? [];
+  return (
+    <div className="space-y-4">
+      <PublicProfile profile={worker} ratings={list} />
+      {worker.slug && <Link to={`/w/${worker.slug}`} className="inline-block text-sm font-medium text-primary">View public profile</Link>}
+    </div>
   );
 }

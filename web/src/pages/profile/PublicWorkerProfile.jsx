@@ -7,11 +7,12 @@ import { profileApi } from '../../services/profileApi';
 export default function PublicWorkerProfile() {
   const { slug } = useParams();
   const profile = useFetch(() => profileApi.getPublic(slug), [slug]);
-  const history = useFetch(() => profileApi.getHistory(slug, { limit: 20 }), [slug]);
+  const ratings = useFetch(() => profileApi.getRatings(slug, { limit: 20 }), [slug]);
+  const list = ratings.data?.data?.ratings ?? ratings.data?.ratings ?? [];
   return (
     <div className="container-page py-10">
       <DataState result={profile}>
-        {(p) => <PublicProfile profile={p} history={history.data?.items ?? history.data ?? []} />}
+        {(raw) => <PublicProfile profile={raw.data?.profile ?? raw.profile ?? raw} ratings={list} />}
       </DataState>
     </div>
   );
