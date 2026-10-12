@@ -13,31 +13,39 @@ import PageHeader from './PageHeader';
 import { toCsv, downloadCsv } from '../../utils/csv';
 
 /**
- * Generic paginated table for admin / organization lists.
- * fetcher(params) -> api promise; expects res.data = { items, pages } or an array.
- * columns: [{ key, header, render?(row), csv?(row) }]   filters: [{ name, placeholder, options }]
- * exportName: when set, shows an "Export CSV" button for the rows on screen.
+ * Generic paginated table for admin lists.
+ * fetcher(params) -> api promise resolving to { data: { [dataKey]: rows }, meta: { totalPages } }.
+ * columns: [{ key, header, render?(row, reload) }]   filters: [{ name, placeholder, options }]
+ * Search is sent as `q` only when searchable is true (use it only where the endpoint supports q).
  */
-export default function ResourceTable({ title, subtitle, fetcher, columns, filters = [], searchable = true, action, rowKey = '_id', emptyTitle = 'Nothing here yet', exportName }) {
+export default function ResourceTable({
+  title, subtitle, fetcher, dataKey, columns, filters = [], searchable = false, action,
+  rowKey = '_id', emptyTitle = 'Nothing here yet', exportName,
+}) {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [f, setF] = useState({});
   const dq = useDebounce(q);
-  const res = useFetch(() => fetcher({ q: dq || undefined, page, limit: 15, ...f }), [dq, page, JSON.stringify(f)]);
-  const items = res.data?.items ?? (Array.isArray(res.data) ? res.data : []);
-  const pages = res.data?.pages ?? 1;
+  const res = useFetch(
+    () => fetcher({ q: dq.trim().length >= 2 ? dq.trim() : undefined, page, limit: 15, ...f }),
+    [dq, page, JSON.stringify(f)]
+  );
+  const items = res.data?.data?.[dataKey] ?? res.data?.[dataKey] ?? [];
+  const pages = res.data?.meta?.totalPages ?? 1;
   const exportCols = columns.filter((c) => c.header);
 
   return (
     <>
       <PageHeader title={title} subtitle={subtitle} action={
         <div className="flex gap-2">
-          {exportName && <Button variant="outline" icon={Download} disabled={!items.length} onClick={() => downloadCsv(`${exportName}.csv`, toCsv(items, exportCols))}>Export CSV</Button>}
+          {exportName && <Button variant="outline" icon={Download} disabled={!items.length}
+            onClick={() => downloadCsv(`${exportName}.csv`, toCsv(items, exportCols))}>Export CSV</Button>}
           {action}
         </div>} />
       {(searchable || filters.length > 0) && (
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
-          {searchable && <Input placeholder="Search…" prefix={<Search size={16} />} aria-label="Search" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />}
+          {searchable && <Input placeholder="Search (min 2 letters)…" prefix={<Search size={16} />} aria-label="Search"
+            value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />}
           {filters.map((fl) => (
             <Select key={fl.name} placeholder={fl.placeholder} options={fl.options} value={f[fl.name] || ''}
               onChange={(e) => { setF({ ...f, [fl.name]: e.target.value || undefined }); setPage(1); }} />

@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import useT from '../../hooks/useT';
-import { LayoutDashboard, User, FileText, ShieldCheck, QrCode, Settings, Users, Building2, BarChart3, ScrollText, Briefcase } from 'lucide-react';
+import { LayoutDashboard, User, FileText, ShieldCheck, QrCode, Settings, Users, Building2, ScrollText, Briefcase, Star, Flag } from 'lucide-react';
 
 export const MENU = {
   worker: [
@@ -12,7 +12,7 @@ export const MENU = {
     { to: '/worker/organizations', label: 'My Organizations', icon: Building2, feature: 'organizations' },
     { to: '/worker/settings', key: 'nav.settings', label: 'Settings', icon: Settings },
   ],
-  organization: [
+  org_admin: [
     { to: '/organization/dashboard', key: 'nav.dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/organization/members', label: 'Members', icon: Users },
     { to: '/organization/jobs', label: 'Jobs', icon: Briefcase },
@@ -21,10 +21,10 @@ export const MENU = {
   admin: [
     { to: '/admin/dashboard', key: 'nav.dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/admin/users', label: 'Users', icon: Users },
-    { to: '/admin/workers', label: 'Workers', icon: User },
+    { to: '/admin/workers', label: 'Flagged workers', icon: Flag },
     { to: '/admin/organizations', label: 'Organizations', icon: Building2 },
     { to: '/admin/receipts', label: 'Receipts', icon: FileText },
-    { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
+    { to: '/admin/reports', label: 'Ratings', icon: Star },
     { to: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
   ],
 };

@@ -1,6 +1,9 @@
 import api from './api';
 
 export const workerApi = {
+  exportData: () => api.get('/account/export'),
+  sendDeleteOtp: () => api.post('/account/delete-otp'),
+  deleteAccount: (otp) => api.delete('/account', { data: { otp, confirm: 'DELETE' } }),
   getMe: () => api.get('/workers/me'),                       // -> { data: { worker } }
   update: (payload) => api.patch('/workers/me', payload),    // categories, skills, bio, latitude+longitude...
   trust: () => api.get('/workers/me/trust'),                 // -> { data: { trust } } (null if frozen)

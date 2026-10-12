@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Download } from 'lucide-react';
 import PageHeader from '../../components/common/PageHeader';
 import Button from '../../components/common/Button';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
@@ -12,18 +12,45 @@ import { toast } from '../../store/notificationStore';
 import { formatPhone } from '../../utils/formatters';
 
 export default function Settings() {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
-  const [typed, setTyped] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const requestDeletion = async () => {
+  const closeDelete = () => { setDelOpen(false); setCodeSent(false); setOtp(''); };
+
+  const sendCode = async () => {
     setBusy(true);
-    try { await workerApi.requestDeletion(); toast.success('Deletion request submitted'); setDelOpen(false); setTyped(''); }
+    try { await workerApi.sendDeleteOtp(); setCodeSent(true); toast.success('Code sent to your phone'); }
     catch (e) { toast.error(e.message); } finally { setBusy(false); }
   };
+
+  const confirmDelete = async () => {
+    if (!/^\d{4,8}$/.test(otp.trim())) return toast.error('Enter the code we sent you');
+    setBusy(true);
+    try {
+      await workerApi.deleteAccount(otp.trim());
+      toast.success('Your account has been deleted');
+      await signOut();
+      navigate('/', { replace: true });
+    } catch (e) { toast.error(e.message); } finally { setBusy(false); }
+  };
+
+  const download = async () => {
+    try {
+      const res = await workerApi.exportData();
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'kaamnama-my-data.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { toast.error(e.message); }
+  };
+
   return (
     <>
       <PageHeader title="Settings" subtitle="Manage your account and data" />
@@ -37,22 +64,38 @@ export default function Settings() {
             <div className="flex items-center justify-between"><dt className="text-ink-muted">Language</dt><dd><LanguageToggle /></dd></div>
           </dl>
         </div>
+
         <div className="card">
           <h2 className="mb-2 flex items-center gap-2"><ShieldCheck size={20} className="text-primary" />Your data</h2>
-          <p className="text-sm leading-relaxed text-ink-muted">Your work history is tied to you, not to any app, platform or city. It stays with you if you leave an organization. You can ask us to delete it at any time, which is your right under India’s data protection law.</p>
-          <Button variant="danger" className="mt-4" onClick={() => setDelOpen(true)}>Request data deletion</Button>
+          <p className="text-sm leading-relaxed text-ink-muted">
+            You can download everything we hold about you, or delete your account. Deleting removes your personal details.
+            Past job records stay in anonymised form so customers keep their history.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button variant="outline" icon={Download} onClick={download}>Download my data</Button>
+            <Button variant="danger" onClick={() => setDelOpen(true)}>Delete my account</Button>
+          </div>
         </div>
+
         <div className="card">
           <h2 className="mb-2">Session</h2>
           <p className="mb-4 text-sm text-ink-muted">Log out of Kaamnama on this device.</p>
           <Button variant="outline" onClick={() => setLogoutOpen(true)}>Log out</Button>
         </div>
       </div>
-      <ConfirmDialog open={logoutOpen} onClose={() => setLogoutOpen(false)} title="Log out?" message="You will need to verify your phone number to log in again."
-        confirmText="Log out" onConfirm={() => { logout(); navigate('/login'); }} />
-      <ConfirmDialog open={delOpen} onClose={() => setDelOpen(false)} danger loading={busy} title="Delete all your data?" confirmText="Request deletion"
-        message={<span>This permanently removes your profile and verified work history. Type <b>DELETE</b> to confirm.<Input className="mt-3" aria-label="Type DELETE" value={typed} onChange={(e) => setTyped(e.target.value)} /></span>}
-        onConfirm={() => (typed === 'DELETE' ? requestDeletion() : toast.error('Type DELETE to confirm'))} />
+
+      <ConfirmDialog open={logoutOpen} onClose={() => setLogoutOpen(false)} title="Log out?"
+        message="You will need to verify your phone number to log in again." confirmText="Log out"
+        onConfirm={async () => { await signOut(); navigate('/login'); }} />
+
+      <ConfirmDialog open={delOpen} onClose={closeDelete} danger loading={busy} title="Delete your account?"
+        confirmText={codeSent ? 'Delete permanently' : 'Send code'}
+        message={codeSent ? (
+          <span>Enter the code we sent to your phone. This cannot be undone.
+            <Input className="mt-3" aria-label="Deletion code" inputMode="numeric" maxLength={8} value={otp} onChange={(e) => setOtp(e.target.value)} />
+          </span>
+        ) : <span>We will send a code to your phone to confirm it is you.</span>}
+        onConfirm={codeSent ? confirmDelete : sendCode} />
     </>
   );
 }

@@ -12,7 +12,7 @@ import useT from '../../hooks/useT';
 import { FEATURES } from '../../utils/constants';
 
 export default function DashboardLayout() {
-  const { user, role, logout } = useAuth();
+  const { user, role, signOut } = useAuth();
   const { t } = useT();
   const [drawer, setDrawer] = useState(false);
   const [q, setQ] = useState('');
@@ -20,7 +20,7 @@ export default function DashboardLayout() {
   const { pathname } = useLocation();
   const items = (MENU[role] || []).filter((i) => !i.feature || FEATURES[i.feature]);
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = async () => { await signOut(); navigate('/login'); };
   const search = (e) => { e.preventDefault(); if (q.trim()) navigate(`/directory/search?q=${encodeURIComponent(q.trim())}`); };
   const showFab = role === 'worker' && !pathname.endsWith('/receipts/new');
 
@@ -41,7 +41,7 @@ export default function DashboardLayout() {
           <span className="hidden sm:block"><LanguageToggle /></span>
           <NotificationBell />
           <div className="flex items-center gap-2 pl-2">
-            <Avatar name={user?.name} src={user?.avatar} size={36} />
+            <Avatar name={user?.name} src={user?.avatarUrl} size={36} />
             <span className="hidden text-sm font-medium sm:block">{user?.name}</span>
           </div>
           <button onClick={handleLogout} className="rounded-lg p-2 text-ink-muted hover:bg-slate-100" aria-label="Logout"><LogOut size={18} /></button>
